@@ -1,0 +1,7 @@
+Flicker8k_Dataset/*
+Flickr8k_text/*
+*.DS_Store
+*.pyc
+*.xml
+.idea/*
+
