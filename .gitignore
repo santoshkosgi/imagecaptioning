@@ -4,4 +4,5 @@ Flickr8k_text/*
 *.pyc
 *.xml
 .idea/*
+models/*
 
