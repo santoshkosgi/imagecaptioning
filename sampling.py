@@ -79,9 +79,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--image', type=str, required=True, help='input image for generating caption')
-    parser.add_argument('--encoder_path', type=str, default='models/encoder-1-230.ckpt',
+    parser.add_argument('--encoder_path', type=str, default='models/encoder.ckpt',
                         help='path for trained encoder')
-    parser.add_argument('--decoder_path', type=str, default='models/decoder-1-230.ckpt',
+    parser.add_argument('--decoder_path', type=str, default='models/decoder.ckpt',
                         help='path for trained decoder')
     parser.add_argument('--vocab_path', type=str, default='Data/vocab.pkl', help='path for vocabulary wrapper')
 

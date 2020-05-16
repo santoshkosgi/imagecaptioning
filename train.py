@@ -44,6 +44,11 @@ def main(args):
 
     decoder = Decoder(args.embed_size, args.hidden_size, len(vocab), args.num_layers)
 
+    # Load saved model
+    encoder.load_state_dict(torch.load(args.encoder_path))
+    decoder.load_state_dict(torch.load(args.decoder_path))
+
+
     criterion = nn.CrossEntropyLoss()
     params = list(decoder.parameters()) + list(encoder.linear.parameters()) + list(encoder.bn.parameters())
     optimizer = torch.optim.Adam(params, lr=args.learning_rate)
@@ -75,14 +80,18 @@ def main(args):
                 # Save the model checkpoints
             if (i + 1) % args.save_step == 0:
                 torch.save(decoder.state_dict(), os.path.join(
-                    args.model_path, 'decoder-{}-{}.ckpt'.format(epoch + 1, i + 1)))
+                    args.model_path, 'decoder.ckpt'))
                 torch.save(encoder.state_dict(), os.path.join(
-                    args.model_path, 'encoder-{}-{}.ckpt'.format(epoch + 1, i + 1)))
+                    args.model_path, 'encoder.ckpt'))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default='models/', help='path for saving trained models')
+    parser.add_argument('--encoder_path', type=str, default='models/encoder_old.ckpt',
+                        help='path for trained encoder')
+    parser.add_argument('--decoder_path', type=str, default='models/decoder_old.ckpt',
+                        help='path for trained decoder')
     # parser.add_argument('--crop_size', type=int, default=224, help='size for randomly cropping images')
     parser.add_argument('--vocab_path', type=str, default='Data/vocab.pkl', help='path for vocabulary wrapper')
     parser.add_argument('--image_dir', type=str, default='Flicker8k_Dataset', help='directory for resized images')
@@ -96,7 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_size', type=int, default=512, help='dimension of lstm hidden states')
     parser.add_argument('--num_layers', type=int, default=1, help='number of layers in lstm')
 
-    parser.add_argument('--num_epochs', type=int, default=1)
+    parser.add_argument('--num_epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--learning_rate', type=float, default=0.001)
