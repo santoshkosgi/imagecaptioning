@@ -10,10 +10,10 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 if os.path.join(script_dir, "..", "..") not in sys.path:
     sys.path.insert(0, os.path.join(script_dir, "..", ".."))
 
-from dataloader import get_loader
-from build_vocabulary import Vocabulary
-from models import Encoder
-from models import Decoder
+from imagecaptioning.dataloader import get_loader
+from imagecaptioning.build_vocabulary import Vocabulary
+from imagecaptioning.models import Encoder
+from imagecaptioning.models import Decoder
 from torch.nn.utils.rnn import pack_padded_sequence
 from torchvision import transforms
 import json
@@ -88,9 +88,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default='models/', help='path for saving trained models')
-    parser.add_argument('--encoder_path', type=str, default='models/encoder_old.ckpt',
+    parser.add_argument('--encoder_path', type=str, default='models/encoder.ckpt',
                         help='path for trained encoder')
-    parser.add_argument('--decoder_path', type=str, default='models/decoder_old.ckpt',
+    parser.add_argument('--decoder_path', type=str, default='models/decoder.ckpt',
                         help='path for trained decoder')
     # parser.add_argument('--crop_size', type=int, default=224, help='size for randomly cropping images')
     parser.add_argument('--vocab_path', type=str, default='Data/vocab.pkl', help='path for vocabulary wrapper')

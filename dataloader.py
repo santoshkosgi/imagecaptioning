@@ -10,7 +10,7 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image
 import nltk
-from build_vocabulary import Vocabulary
+from imagecaptioning.build_vocabulary import Vocabulary
 import pickle
 import json
 

@@ -5,11 +5,11 @@ generates the caption for it.
 import os
 import torch
 from PIL import Image
-from models import Encoder
-from models import Decoder
+from imagecaptioning.models import Encoder
+from imagecaptioning.models import Decoder
 from torch.nn.utils.rnn import pack_padded_sequence
 from torchvision import transforms
-from build_vocabulary import Vocabulary
+from imagecaptioning.build_vocabulary import Vocabulary
 import pickle
 import argparse
 import matplotlib.pyplot as plt
@@ -46,6 +46,7 @@ def main(args):
     with open(args.vocab_path, 'rb') as f:
         vocab = pickle.load(f)
 
+    # .eval to specify its evaluation.
     encoder = Encoder(args.embed_size).eval()
 
     decoder = Decoder(args.embed_size, args.hidden_size, len(vocab), args.num_layers).eval()
@@ -59,6 +60,8 @@ def main(args):
     features = encoder(image)
 
     sampled_ids = decoder.sample(features)
+
+    decoder.find_prob_of_actual_caption(features, [vocab.word2idx[word.lower()] for word in args.caption])
 
     sampled_ids = sampled_ids[0].numpy()
     sampled_caption = []
@@ -79,6 +82,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--image', type=str, required=True, help='input image for generating caption')
+    parser.add_argument('--caption', type=str, nargs='+', required=False, help='actual caption of the image')
     parser.add_argument('--encoder_path', type=str, default='models/encoder.ckpt',
                         help='path for trained encoder')
     parser.add_argument('--decoder_path', type=str, default='models/decoder.ckpt',
