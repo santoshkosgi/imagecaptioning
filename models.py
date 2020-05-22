@@ -134,5 +134,6 @@ class Decoder(nn.Module):
             prob = prob + math.log(output[0][caption])
             inputs = self.embed(torch.tensor([caption]))  # inputs: (batch_size, embed_size)
             input = inputs.unsqueeze(1)
-        print("Probability of actual caption is ", prob)
+
+        print("Probability of actual caption is ", prob/20)
 
