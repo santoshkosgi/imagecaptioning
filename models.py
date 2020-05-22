@@ -127,12 +127,11 @@ class Decoder(nn.Module):
         :return:
         """
         input = features.unsqueeze(1)
-        prob = 1
+        prob = 0
         for caption in capion_index_list:
             hidden, states = self.lstm(input, states)
             output = self.linear(hidden.squeeze(1))
-            prob = prob * output[0][caption]
-            _, predicted = output.max(1)
+            prob = prob + math.log(output[0][caption])
             inputs = self.embed(torch.tensor([caption]))  # inputs: (batch_size, embed_size)
             input = inputs.unsqueeze(1)
         print("Probability of actual caption is ", prob)
