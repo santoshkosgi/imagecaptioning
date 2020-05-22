@@ -114,7 +114,7 @@ class Decoder(nn.Module):
             input = inputs.unsqueeze(1)
 
         sorted_captions_list = sorted(all_scores_level, key=lambda k: k[4], reverse=True)
-        print("Probability of generated caption is ", sorted_captions_list[0][-1])
+        print("Probability of generated caption is ", sorted_captions_list[0][4])
 
         caption_indes = torch.tensor(sorted_captions_list[0][2]).unsqueeze(0)
         return caption_indes
@@ -135,5 +135,5 @@ class Decoder(nn.Module):
             inputs = self.embed(torch.tensor([caption]))  # inputs: (batch_size, embed_size)
             input = inputs.unsqueeze(1)
 
-        print("Probability of actual caption is ", prob/20)
+        print("Probability of actual caption is ", prob/len(capion_index_list))
 

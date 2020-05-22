@@ -18,6 +18,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from torchvision import transforms
 import json
 
+
 def main(args):
     # Create model directory
     if not os.path.exists(args.model_path):
@@ -51,7 +52,7 @@ def main(args):
 
     criterion = nn.CrossEntropyLoss()
     params = list(decoder.parameters()) + list(encoder.linear.parameters()) + list(encoder.bn.parameters())
-    optimizer = torch.optim.Adam(params, lr=args.learning_rate)
+    optimizer = torch.optim.Adam(params, lr=args.learning_rate, weight_decay=1e-5)
 
     # Train the models
     total_step = len(data_loader)
@@ -69,9 +70,9 @@ def main(args):
             output = decoder(features, captions, lengths)
             loss = criterion(output, targets)
             loss.backward()
+            optimizer.step()
             encoder.zero_grad()
             decoder.zero_grad()
-            optimizer.step()
 
             if i % args.log_step == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Perplexity: {:5.4f}'
@@ -103,7 +104,7 @@ if __name__ == '__main__':
     # Model parameters
     parser.add_argument('--embed_size', type=int, default=256, help='dimension of word embedding vectors')
     parser.add_argument('--hidden_size', type=int, default=512, help='dimension of lstm hidden states')
-    parser.add_argument('--num_layers', type=int, default=1, help='number of layers in lstm')
+    parser.add_argument('--num_layers', type=int, default=2, help='number of layers in lstm')
 
     parser.add_argument('--num_epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=128)
