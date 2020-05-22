@@ -5,7 +5,9 @@ import argparse
 import nltk
 from collections import Counter
 import pickle
-
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 class Vocabulary(object):
     """

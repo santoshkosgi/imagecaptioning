@@ -66,7 +66,7 @@ class Decoder(nn.Module):
         outputs = self.linear(lstm_out.data)
         return outputs
 
-    def sample(self, features, states= None):
+    def sample(self, features, end_token_index, states= None):
         input = features.unsqueeze(1)
         caption_indes = []
 
@@ -74,7 +74,7 @@ class Decoder(nn.Module):
         # states - (h,c) of lstm
         # [] - output sequence till now
         # 1 - probability of the sequence predicted till now.
-        queue = [(input, states, [], 1), "level"]
+        queue = [(input, states, [], 1, True), "level"]
         # This stores scores of all possible outcomes of a level.
         # When processing of a level is done, top beamsearch_n entries from these are populated to queue.
         all_scores_level = []
@@ -90,16 +90,22 @@ class Decoder(nn.Module):
                     break
                 all_scores_level = []
                 continue
-            input, states, caption_list, prob = queue.pop(0)
+            input, states, caption_list, prob, shall_continue = queue.pop(0)
+            if not shall_continue:
+                all_scores_level.append((input, states, caption_list, prob, shall_continue))
+                continue
             hidden, states = self.lstm(input, states)
             output = self.linear(hidden.squeeze(1))
             # To consider beamsearch_n top words.
             values, indices = torch.topk(output, beamsearch_n)
             idx = 0
             while idx < beamsearch_n:
+                to_continue = True
+                if indices[0][idx] == end_token_index:
+                    to_continue = False
                 input_ = self.embed(indices[0][idx]).unsqueeze(0).unsqueeze(0)
                 all_scores_level.append((input_, states, caption_list + [indices[0][idx]],
-                                         prob * values[0][idx]))
+                                         prob * values[0][idx], to_continue))
                 idx += 1
             _, predicted = output.max(1)
             caption_indes.append(predicted)

@@ -3,6 +3,8 @@ This script has methods to load the encoder and decoder trained models and given
 generates the caption for it.
 """
 import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import torch
 from PIL import Image
 from imagecaptioning.models import Encoder
@@ -59,7 +61,7 @@ def main(args):
 
     features = encoder(image)
 
-    sampled_ids = decoder.sample(features)
+    sampled_ids = decoder.sample(features, vocab.word2idx['<end>'])
 
     decoder.find_prob_of_actual_caption(features, [vocab.word2idx[word.lower()] for word in args.caption])
 
@@ -72,6 +74,8 @@ def main(args):
         if word == '<end>':
             break
     sentence = ' '.join(sampled_caption)
+
+    decoder.find_prob_of_actual_caption(features, [vocab.word2idx[word.lower()] for word in sampled_caption])
 
     # Print out the image and the generated caption
     print(sentence)

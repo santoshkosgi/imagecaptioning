@@ -4,6 +4,8 @@ Preprocess the images to the format needed by resnet 101 and split the data to t
 validation.
 """
 import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import torch
 import torchvision.datasets as dset
 import torch.utils.data as data

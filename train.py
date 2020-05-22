@@ -7,8 +7,8 @@ import pickle
 import sys
 script_name = os.path.basename(__file__)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-if os.path.join(script_dir, "..", "..") not in sys.path:
-    sys.path.insert(0, os.path.join(script_dir, "..", ".."))
+if os.path.join(script_dir, "..") not in sys.path:
+    sys.path.insert(0, os.path.join(script_dir, ".."))
 
 from imagecaptioning.dataloader import get_loader
 from imagecaptioning.build_vocabulary import Vocabulary
