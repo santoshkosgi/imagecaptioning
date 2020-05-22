@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torch.nn.utils.rnn import pack_padded_sequence
-
+import math
 beamsearch_n = 10
 
 
@@ -74,7 +74,7 @@ class Decoder(nn.Module):
         # states - (h,c) of lstm
         # [] - output sequence till now
         # 1 - probability of the sequence predicted till now.
-        queue = [(input, states, [], 1, True), "level"]
+        queue = [(input, states, [], 0, 0, True), "level"]
         # This stores scores of all possible outcomes of a level.
         # When processing of a level is done, top beamsearch_n entries from these are populated to queue.
         all_scores_level = []
@@ -83,16 +83,16 @@ class Decoder(nn.Module):
             if queue[0] == "level":
                 # End of a level
                 queue.pop(0)
-                queue = sorted(all_scores_level, key= lambda k: k[-1], reverse=True)[:beamsearch_n]
+                queue = sorted(all_scores_level, key=lambda k: k[4], reverse=True)[:beamsearch_n]
                 queue.append("level")
                 seq += 1
                 if not (seq < self.max_seg_length):
                     break
                 all_scores_level = []
                 continue
-            input, states, caption_list, prob, shall_continue = queue.pop(0)
+            input, states, caption_list, prob, norm_prob, shall_continue = queue.pop(0)
             if not shall_continue:
-                all_scores_level.append((input, states, caption_list, prob, shall_continue))
+                all_scores_level.append((input, states, caption_list, prob, norm_prob, shall_continue))
                 continue
             hidden, states = self.lstm(input, states)
             output = self.linear(hidden.squeeze(1))
@@ -105,14 +105,15 @@ class Decoder(nn.Module):
                     to_continue = False
                 input_ = self.embed(indices[0][idx]).unsqueeze(0).unsqueeze(0)
                 all_scores_level.append((input_, states, caption_list + [indices[0][idx]],
-                                         prob * values[0][idx], to_continue))
+                                         prob + math.log(values[0][idx]),
+                                         (prob + math.log(values[0][idx]))/(len(caption_list) + 1), to_continue))
                 idx += 1
             _, predicted = output.max(1)
             caption_indes.append(predicted)
             inputs = self.embed(predicted)  # inputs: (batch_size, embed_size)
             input = inputs.unsqueeze(1)
 
-        sorted_captions_list = sorted(all_scores_level, key=lambda k: k[-1], reverse=True)
+        sorted_captions_list = sorted(all_scores_level, key=lambda k: k[4], reverse=True)
         print("Probability of generated caption is ", sorted_captions_list[0][-1])
 
         caption_indes = torch.tensor(sorted_captions_list[0][2]).unsqueeze(0)

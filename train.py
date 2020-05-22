@@ -45,8 +45,8 @@ def main(args):
     decoder = Decoder(args.embed_size, args.hidden_size, len(vocab), args.num_layers)
 
     # Load saved model
-    encoder.load_state_dict(torch.load(args.encoder_path))
-    decoder.load_state_dict(torch.load(args.decoder_path))
+    # encoder.load_state_dict(torch.load(args.encoder_path))
+    # decoder.load_state_dict(torch.load(args.decoder_path))
 
 
     criterion = nn.CrossEntropyLoss()
