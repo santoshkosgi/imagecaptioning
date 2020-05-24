@@ -6,30 +6,32 @@ import json
 import argparse
 
 
-def create_data_json(captions_file, training_images, json_file_path):
+def create_data_json(captions_file, images_name, json_file_path):
     """
 
     :param captions_file: A file which contains image name and its corresponding caption
-    :param training_images: A file which contains list of names of training images.
+    :param images_name: A file which contains list of names of training images.
     :param json_file_path: Location to the output JSON file.
     :return: stores in /Data folder.
     """
-    train_images = open(training_images, "r")
+    images = open(images_name, "r")
 
-    train_images = [line.strip() for line in list(train_images)]
+    images = [line.strip() for line in list(images)]
 
-    training_data = []
+    training_data = {}
 
     for caption_label in open(captions_file, "r"):
         image_name, caption = caption_label.split(maxsplit=1)
         image_name = image_name.split("#")[0]
-        # Only considering the images in training.
-        if image_name in train_images:
+        # Only considering the images in data.
+        if image_name in images:
             caption = caption.strip()
-            training_data.append([(image_name, caption)])
+            if image_name not in training_data:
+                training_data[image_name] = ([image_name], [])
+            training_data[image_name][1].append(caption)
 
     with open(json_file_path, "w") as output_json_file:
-        json.dump(training_data, output_json_file)
+        json.dump(list(training_data.values()), output_json_file)
 
 
 if __name__ == '__main__':
