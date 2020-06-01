@@ -12,30 +12,58 @@ class Encoder(nn.Module):
     """
     def __init__(self, embed_size):
         """
-
         :param embed_size: Size of the image embedding.
         """
         super(Encoder, self).__init__()
         resnet = models.resnet101(pretrained=True)
         modules = list(resnet.children())[:-1]
         self.resnet = nn.Sequential(*modules)
-        self.linear = nn.Linear(resnet.fc.in_features, embed_size)
-        self.bn = nn.BatchNorm1d(embed_size, momentum=0.01)
 
     def forward(self, images):
         # Do not want to update resnet weights.
         with torch.no_grad():
             features = self.resnet(images)
         features = features.reshape(features.shape[0], -1)
-        features = self.bn(self.linear(features))
         return features
 
+
+class Attention(nn.Module):
+    """
+    Here we define the Attention Model class.
+    Intuition of Attention layer is to find the weights of each pixel of the image to look for next.
+
+    """
+    def __init__(self, encoder_dim, decoder_dim, attention_dim):
+        """
+        :param encoder_dim: Dimension of the encoded image. Batch_size * Image size
+        :param decoder_dim: Hidden dimension of the decoder image. Batch_size * hidden_dim_size
+        :param attention_dim: Dimension of the attention layer.
+        """
+        super(Attention, self).__init__()
+        self.image_attention = nn.Linear(encoder_dim, attention_dim)
+        self.hidden_attention = nn.Linear(decoder_dim, attention_dim)
+        self.attention_layer = nn.Linear(attention_dim, encoder_dim)
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, encoded_image, hidden_state):
+        """
+        This function accepts encoded image and hidden state of the previous lstm cell and
+        returns the attention output.
+        :param encoded_image: encoded image
+        :param hidden_state: Hidden state
+        :return:
+        """
+        attention_image = self.image_attention(encoded_image)
+        attention_hidden = self.hidden_attention(hidden_state)
+        attention_params = self.softmax(self.attention_layer(self.relu(attention_hidden + attention_image)))
+        return encoded_image * attention_params
 
 class Decoder(nn.Module):
     """
     Here we define the Decoder class. LSTM.
     """
-    def __init__(self, embed_size, hidden_size, vocab_size, num_layers, max_seqlength=20):
+    def __init__(self, embed_size, hidden_size, vocab_size, num_layers, attention_dim, max_seqlength=20, encoder_dim=2048):
         """
         :param embed_size: Size of the output of embedding layer.
         :param hidden_size: Size of the hidden layer.
@@ -44,11 +72,25 @@ class Decoder(nn.Module):
         :param max_seqlength: Length of the maximum sequence to be considered.
         """
         super(Decoder, self).__init__()
+        self.vocab_size = vocab_size
         self.embed = nn.Embedding(vocab_size, embed_size)
-        self.lstm = nn.LSTM(input_size=embed_size, hidden_size=hidden_size, num_layers=num_layers,
-                            batch_first=True)
+        self.lstm = nn.LSTMCell(encoder_dim + embed_size, hidden_size)
         self.linear = nn.Linear(hidden_size, vocab_size)
         self.max_seg_length = max_seqlength
+        self.attention = Attention(encoder_dim, hidden_size, attention_dim)
+        self.init_h = nn.Linear(encoder_dim, hidden_size)  # linear layer to find initial hidden state of LSTMCell
+        self.init_c = nn.Linear(encoder_dim, hidden_size)  # linear layer to find initial cell state of LSTMCell
+
+
+    def init_hidden(self, features):
+        """
+        This function initialises the initial states of LSTM cell.
+        :param features: Encoded image of dimension.
+        :return:
+        """
+        h = self.init_h(features)
+        c = self.init_c(features)
+        return h,c
 
     def forward(self, features, captions, lengths):
         """
@@ -58,12 +100,26 @@ class Decoder(nn.Module):
         :param lengths: length of the each caption.
         :return: Softmax output for each time stamp.
         """
+        # Call the attention layer.
+
+        lengths = [l - 1 for l in lengths]
+
+        h, c = self.init_hidden(features)
+
+        features_attention = self.attention(features, h)
+
         embeddings = self.embed(captions)
-        # Passing o/p of encoder to the lstm during the first time stamp.
-        embeddings = torch.cat((features.unsqueeze(1), embeddings), 1)
-        packed = pack_padded_sequence(embeddings, lengths, batch_first=True)
-        lstm_out, (ht, ct) = self.lstm(packed)
-        outputs = self.linear(lstm_out.data)
+
+        max_length = lengths[0]
+        # So now LSTM should run for 30 sequences. At each sequence following for loop selects
+        # images which have that length and passes to LSTM Cell
+        outputs = torch.zeros((features.shape[0], max_length, self.vocab_size))
+        for i in range(max_length):
+            batch_len = sum([l > i for l in lengths])
+            lstm_features = torch.cat((features_attention[:batch_len, :], embeddings[:batch_len, i, :]), dim=1)
+            h, c = self.lstm(lstm_features, (h[:batch_len], c[:batch_len]))
+            pred = self.linear(h)
+            outputs[:batch_len, i, :] = pred
         return outputs
 
     def sample(self, features, end_token_index, states= None):

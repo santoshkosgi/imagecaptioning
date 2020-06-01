@@ -14,6 +14,7 @@ from imagecaptioning.dataloader import get_loader
 from imagecaptioning.build_vocabulary import Vocabulary
 from imagecaptioning.models import Encoder
 from imagecaptioning.models import Decoder
+from imagecaptioning.models import Attention
 from torch.nn.utils.rnn import pack_padded_sequence
 from torchvision import transforms
 import json
@@ -43,15 +44,14 @@ def main(args):
     # Build the models
     encoder = Encoder(args.embed_size)
 
-    decoder = Decoder(args.embed_size, args.hidden_size, len(vocab), args.num_layers)
+    decoder = Decoder(args.embed_size, args.hidden_size, len(vocab), args.num_layers, args.attention_dim)
 
     # Load saved model
     # encoder.load_state_dict(torch.load(args.encoder_path))
     # decoder.load_state_dict(torch.load(args.decoder_path))
 
-
     criterion = nn.CrossEntropyLoss()
-    params = list(decoder.parameters()) + list(encoder.linear.parameters()) + list(encoder.bn.parameters())
+    params = list(decoder.parameters())
     optimizer = torch.optim.Adam(params, lr=args.learning_rate, weight_decay=1e-5)
 
     # Train the models
@@ -64,10 +64,11 @@ def main(args):
             captions = captions
 
             # Targets are like this because, we add embedding layer input at the start of every seq in batch
-            targets = pack_padded_sequence(captions, lengths, batch_first=True)[0]
+
             # Forward, backward and optimize
             features = encoder(images)
             output = decoder(features, captions, lengths)
+            targets = pack_padded_sequence(captions, lengths, batch_first=True)[0]
             loss = criterion(output, targets)
             loss.backward()
             optimizer.step()
@@ -105,6 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--embed_size', type=int, default=256, help='dimension of word embedding vectors')
     parser.add_argument('--hidden_size', type=int, default=512, help='dimension of lstm hidden states')
     parser.add_argument('--num_layers', type=int, default=2, help='number of layers in lstm')
+    parser.add_argument('--attention_dim', type=int, default=512, help='Dimension of the attention layer')
 
     parser.add_argument('--num_epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=128)
