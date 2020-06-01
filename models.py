@@ -120,7 +120,8 @@ class Decoder(nn.Module):
             h, c = self.lstm(lstm_features, (h[:batch_len], c[:batch_len]))
             pred = self.linear(h)
             outputs[:batch_len, i, :] = pred
-        return outputs
+        return pack_padded_sequence(outputs, lengths, batch_first=True)[0]
+
 
     def sample(self, features, end_token_index, states= None):
         input = features.unsqueeze(1)
