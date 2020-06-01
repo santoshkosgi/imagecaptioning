@@ -6,7 +6,6 @@ import math
 beamsearch_n = 10
 
 
-
 class Encoder(nn.Module):
     """
     Here we define different layers in encode.
