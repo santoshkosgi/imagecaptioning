@@ -16,14 +16,14 @@ class Encoder(nn.Module):
         """
         super(Encoder, self).__init__()
         resnet = models.resnet101(pretrained=True)
-        modules = list(resnet.children())[:-1]
+        modules = list(resnet.children())[:-2]
         self.resnet = nn.Sequential(*modules)
 
     def forward(self, images):
         # Do not want to update resnet weights.
         with torch.no_grad():
             features = self.resnet(images)
-        features = features.reshape(features.shape[0], -1)
+        features = features.reshape(features.shape[0], -1, features.shape[1])
         return features
 
 
@@ -42,8 +42,8 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         self.image_attention = nn.Linear(encoder_dim, attention_dim)
         self.hidden_attention = nn.Linear(decoder_dim, attention_dim)
-        self.attention_layer = nn.Linear(attention_dim, encoder_dim)
-        self.relu = nn.ReLU()
+        self.attention_layer = nn.Linear(attention_dim, 1)
+        self.tanh = nn.Tanh()
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, encoded_image, hidden_state):
@@ -56,8 +56,12 @@ class Attention(nn.Module):
         """
         attention_image = self.image_attention(encoded_image)
         attention_hidden = self.hidden_attention(hidden_state)
-        attention_params = self.softmax(self.attention_layer(self.relu(attention_hidden + attention_image)))
-        return encoded_image * attention_params
+        attention_hidden = attention_hidden.unsqueeze(1)
+        attention_output = self.attention_layer(self.tanh(attention_hidden + attention_image))
+        attention_params = self.softmax(attention_output)
+        output = encoded_image * attention_params
+        output = torch.sum(output, dim=1)
+        return output
 
 class Decoder(nn.Module):
     """
@@ -104,10 +108,9 @@ class Decoder(nn.Module):
 
         lengths = [l - 1 for l in lengths]
 
-        h, c = self.init_hidden(features)
+        h, c = self.init_hidden(torch.sum(features, dim=1))
 
         features_attention = self.attention(features, h)
-
         embeddings = self.embed(captions)
 
         max_length = lengths[0]
@@ -116,6 +119,7 @@ class Decoder(nn.Module):
         outputs = torch.zeros((features.shape[0], max_length, self.vocab_size))
         for i in range(max_length):
             batch_len = sum([l > i for l in lengths])
+            features_attention = self.attention(features_attention[:batch_len, :], h[:batch_len])
             lstm_features = torch.cat((features_attention[:batch_len, :], embeddings[:batch_len, i, :]), dim=1)
             h, c = self.lstm(lstm_features, (h[:batch_len], c[:batch_len]))
             pred = self.linear(h)
