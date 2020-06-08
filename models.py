@@ -122,6 +122,22 @@ class Decoder(nn.Module):
             outputs[:batch_len, i, :] = pred
         return pack_padded_sequence(outputs, lengths, batch_first=True)[0]
 
+    def sample_greedy(self, features, start_index, max_length=20):
+        h, c = self.init_hidden(features)
+        sampled_ids = []
+        for i in range(max_length):
+            features_attention = self.attention(features, h)
+            embeddings = self.embed(torch.tensor([start_index]))
+            lstm_features = torch.cat((features_attention, embeddings), dim=1)
+            h, c = self.lstm(lstm_features, (h, c))
+            pred = self.linear(h)
+            _, predicted = pred.max(1)
+            sampled_ids.append(predicted)
+            start_index = predicted
+        sampled_ids = torch.stack(sampled_ids, 1)
+        return sampled_ids
+
+
 
     def sample(self, features, end_token_index, states= None):
         input = features.unsqueeze(1)

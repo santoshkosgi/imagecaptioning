@@ -51,7 +51,7 @@ def main(args):
     # .eval to specify its evaluation.
     encoder = Encoder(args.embed_size).eval()
 
-    decoder = Decoder(args.embed_size, args.hidden_size, len(vocab), args.num_layers).eval()
+    decoder = Decoder(args.embed_size, args.hidden_size, len(vocab), args.num_layers, args.attention_dim).eval()
 
     # Load saved model
     encoder.load_state_dict(torch.load(args.encoder_path))
@@ -61,9 +61,9 @@ def main(args):
 
     features = encoder(image)
 
-    sampled_ids = decoder.sample(features, vocab.word2idx['<end>'])
+    sampled_ids = decoder.sample_greedy(features, vocab.word2idx['<start>'])
 
-    decoder.find_prob_of_actual_caption(features, [vocab.word2idx[word.lower()] for word in args.caption])
+    # decoder.find_prob_of_actual_caption(features, [vocab.word2idx[word.lower()] for word in args.caption])
 
     sampled_ids = sampled_ids[0].numpy()
     sampled_caption = []
@@ -75,7 +75,7 @@ def main(args):
             break
     sentence = ' '.join(sampled_caption)
 
-    decoder.find_prob_of_actual_caption(features, [vocab.word2idx[word.lower()] for word in sampled_caption])
+    # decoder.find_prob_of_actual_caption(features, [vocab.word2idx[word.lower()] for word in sampled_caption])
 
     # Print out the image and the generated caption
     print(sentence)
@@ -96,6 +96,7 @@ if __name__ == '__main__':
     # Model parameters (should be same as paramters in train.py)
     parser.add_argument('--embed_size', type=int, default=256, help='dimension of word embedding vectors')
     parser.add_argument('--hidden_size', type=int, default=512, help='dimension of lstm hidden states')
+    parser.add_argument('--attention_dim', type=int, default=512, help='Dimension of the attention layer')
     parser.add_argument('--num_layers', type=int, default=2, help='number of layers in lstm')
     args = parser.parse_args()
     main(args)
